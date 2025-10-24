@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HCI Interaction Evolution</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'light-bg': '#F7F7F7', // Main background is very light gray/white
+                        'light-card': '#FFFFFF', // Card surfaces are pure white
+                        'main-text': '#333333', // Text is dark gray for contrast
+                        'accent-primary': '#E74C68', // Reddish Pink (Highlight)
+                        'accent-secondary': '#BBBBBB', // Light muted gray (Borders/Dividers)
+                        'muted-fill': '#E0E0E0', // Muted fill color for inputs/backgrounds
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chosen Palette: Light Mode (Reddish Pink Primary, Dark Gray Text) -->
+    <!-- Application Structure Plan: Standalone single-section view focusing only on the historical progression of interface types (CLI, GUI, Touch, Voice/AI). The interactive structure uses timeline buttons to drive updates to both the descriptive text and a dynamic Chart.js visualization. -->
+    <!-- Visualization & Content Choices: Historical Dev. -> Goal: Show Change -> Presentation: Interactive timeline & dynamic bar chart -> Interaction: Clicking a decade on the timeline updates a text panel and a Chart.js bar chart showing interface prevalence, with the key innovation for that era highlighted in the accent color. Justification: Converts a linear historical narrative into an engaging, segmented visual progression. Library: Chart.js. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F7F7F7; /* light-bg */
+            color: #333333; /* main-text */
+        }
+        .card {
+            background-color: #FFFFFF; /* light-card */
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #E0E0E0;
+        }
+        .btn {
+            background-color: #BBBBBB; /* accent-secondary */
+            color: #333333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #E74C68; /* accent-primary (Reddish Pink) */
+            color: #FFFFFF; 
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-accent-primary">The Evolution of Human-Computer Interaction</h1>
+            <p class="text-lg text-main-text mt-2">Historical Shift in User Interaction Methods (Pre-1970s to Today)</p>
+        </header>
+
+        <section id="journey">
+            <div class="card mb-8">
+                <p class="text-main-text text-center max-w-3xl mx-auto">
+                    The way we interact with computers has dramatically changed, moving from complex commands to intuitive gestures. Select a decade below to explore the key developments in interface design.
+                </p>
+            </div>
+
+            <div class="flex justify-center flex-wrap gap-3 mb-8" id="timeline-controls">
+                <button class="btn timeline-btn" data-decade="early">Early Computers</button>
+                <button class="btn timeline-btn" data-decade="1970s">1970s-80s</button>
+                <button class="btn timeline-btn" data-decade="1990s">1990s</button>
+                <button class="btn timeline-btn" data-decade="2000s">2000s</button>
+                <button class="btn timeline-btn" data-decade="2010s">2010s-Today</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div id="timeline-content" class="card">
+                    <h3 id="timeline-title" class="text-xl font-semibold text-accent-primary mb-2"></h3>
+                    <p id="timeline-text" class="text-main-text"></p>
+                </div>
+                <div class="card">
+                    <h3 class="text-xl font-semibold text-center mb-4 text-accent-primary">Interface Frequency (%)</h3>
+                    <div class="chart-container">
+                        <canvas id="interface-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const PRIMARY_ACCENT = '#E74C68';
+            const MUTED_COLOR = '#BBBBBB'; 
+            const MAIN_TEXT_COLOR = '#333333';
+            
+            // Data Structure: [CLI (0), GUI (1), Touch (2), Voice/AI (3)]
+            const timelineData = {
+                early: {
+                    title: "Early Days: Command Line",
+                    text: "Early computers (pre-1970s) were operated by experts using complex command-line interfaces (CLIs). Users had to memorize commands to perform any task. There was no graphical representation, making them inaccessible to the general public.",
+                    chartData: [100, 0, 0, 0],
+                    highlightIndex: 0 // CLI (User Request)
+                },
+                '1970s': {
+                    title: "1970s-80s: The GUI Revolution",
+                    text: "The invention of the Graphical User Interface (GUI) at Xerox PARC, later popularized by Apple and Microsoft, was a monumental shift. It introduced visual elements like icons, windows, and pointers (WIMP), making computers vastly more intuitive and user-friendly.",
+                    chartData: [60, 40, 0, 0],
+                    highlightIndex: 1 // GUI (User Request)
+                },
+                '1990s': {
+                    title: "1990s: The Web and Multimedia",
+                    text: "The rise of the World Wide Web brought HCI to the forefront. Web design principles emerged, focusing on navigation, information architecture, and usability. Workstations became more powerful, enabling richer graphical and multimedia experiences.",
+                    chartData: [10, 85, 5, 0],
+                    highlightIndex: 1 // GUI (User Request)
+                },
+                '2000s': {
+                    title: "2000s: Mobile and Touch",
+                    text: "The introduction of the smartphone, particularly the iPhone in 2007, ushered in the era of touch and mobile computing. This required new HCI principles for smaller screens and direct manipulation with fingers, leading to the rise of 'surface computing'.",
+                    chartData: [5, 65, 30, 0],
+                    highlightIndex: 2 // Touch (User Request)
+                },
+                '2010s': {
+                    title: "2010s-Today: Voice, VR/AR, and AI",
+                    text: "Interaction is becoming more natural and immersive. Voice assistants (Siri, Alexa), Virtual and Augmented Reality (VR/AR), and AI-driven interfaces are creating new paradigms. Biometrics for security and 3D interfaces are also becoming mainstream.",
+                    chartData: [2, 40, 48, 10],
+                    highlightIndex: 3 // Voice/AI (User Request)
+                }
+            };
+            
+            let interfaceChart;
+            
+            function createInterfaceChart() {
+                const ctx = document.getElementById('interface-chart').getContext('2d');
+                interfaceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['CLI', 'GUI', 'Touch', 'Voice/AI'],
+                        datasets: [{
+                            label: 'Interaction Method Prevalence (%)',
+                            data: [],
+                            backgroundColor: [MUTED_COLOR, MUTED_COLOR, MUTED_COLOR, MUTED_COLOR], 
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: { 
+                                max: 100, 
+                                ticks: { 
+                                    callback: value => value + '%',
+                                    color: MAIN_TEXT_COLOR 
+                                },
+                                grid: { color: '#E0E0E0' }
+                            },
+                            y: { 
+                                ticks: { color: MAIN_TEXT_COLOR },
+                                grid: { color: '#E0E0E0' } 
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: context => `${context.dataset.label}: ${context.raw}%` } }
+                        }
+                    }
+                });
+            }
+
+            function updateTimeline(decade) {
+                const data = timelineData[decade];
+                if (!data || !interfaceChart) return;
+                
+                // Use the user-defined highlight index
+                const chartData = data.chartData;
+                const highlightIndex = data.highlightIndex;
+
+                const newColors = chartData.map((val, index) => {
+                    return index === highlightIndex ? PRIMARY_ACCENT : MUTED_COLOR;
+                });
+
+                document.getElementById('timeline-title').textContent = data.title;
+                document.getElementById('timeline-text').textContent = data.text;
+
+                interfaceChart.data.datasets[0].data = chartData;
+                interfaceChart.data.datasets[0].backgroundColor = newColors;
+                interfaceChart.update();
+                
+                // Update button styles
+                document.querySelectorAll('.timeline-btn').forEach(btn => {
+                   btn.style.backgroundColor = btn.dataset.decade === decade ? PRIMARY_ACCENT : MUTED_COLOR;
+                   btn.style.color = btn.dataset.decade === decade ? '#FFFFFF' : MAIN_TEXT_COLOR;
+                });
+            }
+            
+            document.getElementById('timeline-controls').addEventListener('click', (e) => {
+                if (e.target.classList.contains('timeline-btn')) {
+                    updateTimeline(e.target.dataset.decade);
+                }
+            });
+
+            createInterfaceChart();
+            // Start with a default selection for the timeline
+            updateTimeline('early');
+        });
+    </script>
+</body>
+</html>
